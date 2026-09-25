@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Fantasbusta — come funziona</title>
+<meta name="description" content="Fantacalcio a carte collezionabili per dodici manager: come si gioca, cosa serve, e cosa dobbiamo decidere.">
+</head>
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     Identità ripresa dall'applicazione: inchiostro, carta, rosso.
+     Tema unico e scuro per scelta — è il mondo del gioco.
+
+     Spaziatura: SEMPRE dal contenitore, con gap. Nessun margine
+     per singolo elemento — è così che nascono i disallineamenti.
+     ═══════════════════════════════════════════════════════════ */
+  :root {
+    --ink:       #0b0b0e;
+    --ink-2:     #16161c;
+    --ink-3:     #1f1f28;
+    --ink-4:     #33333e;
+    --paper:     #f2ede1;
+    --paper-dim: #a8a294;
+    --rosso:     #e02718;
+
+    --r-A: #e0392b;
+    --t-comune: #8a929e; --t-rara: #2ec4f1; --t-epica: #f0157a; --t-legg: #ffb703;
+    --verde: #38d47a;
+
+    --display: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --body:    ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:    ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(ellipse 60rem 26rem at 50% -4rem, rgba(224,39,24,.16), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  /* Ogni fascia è una griglia: la distanza fra i blocchi la decide il gap. */
+  .wrap {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: grid;
+    gap: 1.15rem;
+    align-content: start;
+    justify-items: stretch;
+  }
+
+  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+  p, ul { margin: 0; }
+
+  h1 {
+    font-size: clamp(3.1rem, 12.5vw, 5.6rem);
+    font-weight: 900;
+    line-height: .84;
+    letter-spacing: -.045em;
+    text-transform: uppercase;
+  }
+  h1 em { font-style: normal; color: var(--rosso); }
+
+  h2 {
+    font-size: clamp(1.85rem, 5.8vw, 2.6rem);
+    font-weight: 900;
+    line-height: .95;
+    letter-spacing: -.035em;
+    text-transform: uppercase;
+  }
+
+  h3 { font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.3; }
+
+  strong { font-weight: 700; color: var(--paper); }
+  em.q { font-style: normal; color: var(--rosso); font-weight: 700; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+    line-height: 1.5;
+  }
+  .eyebrow.acc { color: var(--rosso); }
+
+  .lead  { font-size: 1.12rem; line-height: 1.55; }
+  .dim   { color: var(--paper-dim); }
+  .small { font-size: .88rem; }
+
+  .rule { border-left: 2px solid var(--rosso); padding-left: .9rem; }
+  .quiet-rule { border-left: 2px solid var(--ink-4); padding-left: .9rem; }
+
+  /* ── Testata ── */
+  header.hero { padding: 4.5rem 0 1.5rem; }
+  header.hero .wrap { gap: 2.2rem; }
+
+  .titolo { display: grid; gap: 1.2rem; }
+
+  section { padding: 3.5rem 0; border-top: 1px solid var(--ink-4); }
+
+  /* Il titolo di sezione è un blocco a sé: due righe strette,
+     e il respiro dopo lo dà il gap della fascia. */
+  .sec-head { display: grid; gap: .5rem; }
+
+  /* ── La carta ── */
+  .card-stage { display: grid; justify-items: center; }
+
+  .slot { width: min(17rem, 70vw); aspect-ratio: 5/7; container-type: inline-size; }
+
+  .card {
+    --accent: var(--t-legg); --panel: #ffe4a8;
+    position: relative; width: 100%; height: 100%;
+    border-radius: 6.3cqw; overflow: hidden;
+    background: linear-gradient(168deg, var(--ink-3), var(--ink-2) 55%, var(--ink));
+    box-shadow: 0 1.4rem 3rem -1rem rgba(0,0,0,.95),
+                inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent);
+    animation: sale .9s cubic-bezier(.2,.8,.2,1) backwards;
+  }
+  @keyframes sale { from { opacity: 0; transform: translateY(1.6rem) scale(.9); } }
+
+  .shot {
+    position: absolute; inset: 0 0 auto; height: 62%;
+    background: var(--panel);
+    clip-path: polygon(0 0, 100% 0, 100% 82%, 0 100%);
+    display: grid; place-items: center;
+  }
+  .shot::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(-52deg, transparent 0 4.3cqw, rgba(0,0,0,.07) 4.3cqw 8.6cqw);
+  }
+  .shot span {
+    font-family: var(--display); font-weight: 900; font-size: 26cqw;
+    color: rgba(0,0,0,.28); letter-spacing: -.05em; transform: skewX(-7deg);
+  }
+
+  .top {
+    position: absolute; inset: 0 0 auto; z-index: 5;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 4.7cqw 4.7cqw 0;
+  }
+  .badges { display: flex; gap: 1.7cqw; align-items: stretch; }
+  .role {
+    background: var(--r-A); color: #08080a; border-radius: 1cqw;
+    font-family: var(--display); font-weight: 900; font-size: 5.7cqw;
+    line-height: 1; padding: 2cqw 2.7cqw; display: grid; place-items: center;
+  }
+  .tier {
+    font-family: var(--mono); font-size: 2.9cqw; font-weight: 700; letter-spacing: .2em;
+    text-transform: uppercase; background: var(--accent); color: #08080a;
+    padding: 2cqw 3cqw; border-radius: 1cqw; display: grid; place-items: center;
+  }
+  .power { text-align: right; line-height: .84; display: grid; gap: 1cqw; }
+  .power b { font-family: var(--display); font-weight: 900; font-size: 15cqw; letter-spacing: -.04em; }
+  .power i { font-family: var(--mono); font-style: normal; font-size: 2.7cqw; letter-spacing: .24em; color: var(--paper-dim); text-transform: uppercase; }
+
+  .id { position: absolute; left: 0; right: 0; bottom: 24cqw; z-index: 5; padding: 0 5.7cqw; display: grid; gap: .6cqw; }
+  .id::before {
+    content: ""; position: absolute; left: -3.3cqw; right: -3.3cqw; top: 1.3cqw; bottom: -2cqw;
+    z-index: -1; background: linear-gradient(90deg, var(--accent) 0%, transparent 92%); opacity: .22;
+  }
+  .id .first { font-family: var(--mono); font-size: 3.2cqw; letter-spacing: .22em; text-transform: uppercase; color: var(--paper-dim); line-height: 1.2; }
+  .id .last  { font-family: var(--display); font-weight: 900; font-size: 12.4cqw; line-height: .86; text-transform: uppercase; letter-spacing: -.03em; }
+  .id .club  { display: flex; align-items: center; gap: 2.3cqw; margin-top: 1.4cqw; font-size: 3.4cqw; color: var(--paper-dim); }
+  .id .club i { width: 4.7cqw; height: .7cqw; background: #0068a8; flex: none; }
+  .id .club .up { margin-left: auto; font-family: var(--mono); font-size: 2.7cqw; letter-spacing: .1em; color: var(--verde); background: rgba(56,212,122,.12); padding: .9cqw 1.8cqw; border-radius: .8cqw; }
+
+  .stats { position: absolute; inset: auto 0 0; z-index: 5; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(255,255,255,.08); }
+  .stats > div { padding: 3.7cqw 2cqw 5cqw; text-align: center; position: relative; display: grid; gap: 1cqw; }
+  .stats > div + div::before { content: ""; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: rgba(255,255,255,.08); }
+  .stats b { font-family: var(--mono); font-weight: 700; font-size: 4.8cqw; font-variant-numeric: tabular-nums; }
+  .stats i { font-family: var(--mono); font-style: normal; font-size: 2.4cqw; letter-spacing: .14em; text-transform: uppercase; color: var(--paper-dim); }
+
+  .foil {
+    position: absolute; inset: 0; z-index: 7; pointer-events: none; border-radius: 6.3cqw;
+    opacity: .5; mix-blend-mode: color-dodge;
+    background: radial-gradient(circle 60cqw at 32% 22%, color-mix(in srgb, var(--accent) 60%, #fff), transparent 62%);
+  }
+  .frame { position: absolute; inset: 2.7cqw; z-index: 8; pointer-events: none; border-radius: 4cqw; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+
+  /* ── La settimana ── */
+  .week { display: grid; }
+  .beat {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    column-gap: 1.1rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--ink-4);
+    align-items: start;
+  }
+  .beat:first-child { border-top: 0; padding-top: 0; }
+  .beat time {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--rosso); line-height: 1.55;
+  }
+  .beat-testo { display: grid; gap: .15rem; }
+  .beat-testo b { font-family: var(--display); font-weight: 800; font-size: 1.02rem; letter-spacing: -.01em; line-height: 1.3; }
+  .beat-testo p { color: var(--paper-dim); font-size: .95rem; }
+
+  /* ── Piramide dei tier ── */
+  .pyramid { display: grid; gap: .55rem; }
+  .tier-row { display: grid; grid-template-columns: 6.6rem 1fr 4.6rem; gap: .8rem; align-items: center; }
+  .tier-row .nome { font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
+  .tier-row .conta { font-family: var(--mono); font-size: .76rem; color: var(--paper-dim); font-variant-numeric: tabular-nums; text-align: right; }
+  .barra { height: .8rem; border-radius: 1px; }
+
+  /* ── Elenchi ── */
+  /* Il trattino sporge, il testo scorre sotto sé stesso.
+     NON una griglia sull'<li>: grid rende cella ogni figlio, compresi i
+     nodi di testo nudi, e "<strong>titolo</strong>, resto della frase"
+     finirebbe spezzato su due colonne. */
+  ul.plain { list-style: none; padding: 0; display: grid; gap: .8rem; }
+  ul.plain li {
+    position: relative;
+    padding-left: 1.8rem;
+    color: var(--paper-dim);
+    font-size: .96rem;
+  }
+  ul.plain li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--rosso);
+  }
+
+  /* ── Pannelli ── */
+  .panel { background: var(--ink-2); border: 1px solid var(--ink-4); padding: 1.2rem 1.3rem; display: grid; gap: .6rem; }
+
+  .cards2 { display: grid; gap: .9rem; grid-template-columns: 1fr; }
+  @media (min-width: 34rem) { .cards2 { grid-template-columns: 1fr 1fr; } }
+  .mini { background: var(--ink-2); border: 1px solid var(--ink-4); padding: 1rem 1.1rem; display: grid; gap: .5rem; align-content: start; }
+  .mini p { color: var(--paper-dim); font-size: .9rem; }
+
+  /* ── Tabella ── */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--ink-4); background: var(--ink-2); }
+  table { border-collapse: collapse; width: 100%; min-width: 20rem; }
+  th, td { text-align: left; padding: .58rem .9rem; border-bottom: 1px solid var(--ink-4); font-size: .92rem; }
+  th { font-family: var(--mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--paper-dim); font-weight: 400; }
+  td:last-child, th:last-child { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .plus  { color: var(--verde); }
+  .minus { color: var(--rosso); }
+
+  /* ── Maglia e stemma ── */
+  .kit { display: flex; align-items: flex-end; justify-content: center; gap: 2.2rem; flex-wrap: wrap; padding: .6rem 0; }
+
+  footer { padding: 3rem 0 4.5rem; border-top: 1px solid var(--ink-4); }
+
+  :focus-visible { outline: 2px solid var(--rosso); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="titolo">
+      <p class="eyebrow acc">Fantacalcio a carte collezionabili · 12 manager</p>
+      <h1>Fanta<em>sbusta</em></h1>
+      <p class="lead rule">
+        Niente asta ad agosto, niente rosa che ti porti dietro fino a maggio.
+        <strong>Ogni settimana si sbustano carte nuove</strong>, si scambia con gli altri,
+        e si schiera quello che è uscito.
+      </p>
+    </div>
+
+    <div class="card-stage">
+      <div class="slot">
+        <article class="card">
+          <div class="shot"><span>LM</span></div>
+
+          <div class="top">
+            <div class="badges">
+              <div class="role">A</div>
+              <div class="tier">Leggendaria</div>
+            </div>
+            <div class="power"><b>96</b><i>Power</i></div>
+          </div>
+
+          <div class="id">
+            <div class="first">Lautaro</div>
+            <div class="last">Martínez</div>
+            <div class="club"><i></i>Internazionale<span class="up">▲ sale di tier</span></div>
+          </div>
+
+          <div class="stats">
+            <div><b>7,82</b><i>Fantamedia</i></div>
+            <div><b>+1,4</b><i>Forma</i></div>
+            <div><b>38</b><i>Quot.</i></div>
+          </div>
+
+          <div class="foil"></div>
+          <div class="frame"></div>
+        </article>
+      </div>
+    </div>
+
+    <p class="small dim" style="text-align:center">
+      La rarità di una carta cambia ogni settimana, in base a come sta andando davvero.
+    </p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La settimana</p>
+      <h2>Come gira</h2>
+    </div>
+
+    <div class="week">
+      <div class="beat">
+        <time>Ven 20:45</time>
+        <div class="beat-testo">
+          <b>Comincia la giornata</b>
+          <p>Le rose si congelano, il mazzo si azzera e apre il draft per la settimana dopo.</p>
+        </div>
+      </div>
+      <div class="beat">
+        <time>Sab → Lun</time>
+        <div class="beat-testo">
+          <b>Si sbusta</b>
+          <p>Cinque buste da cinque carte a testa, uno alla volta. Chi sta peggio in classifica pesca per primo.</p>
+        </div>
+      </div>
+      <div class="beat">
+        <time>Lun sera</time>
+        <div class="beat-testo">
+          <b>Apre il mercato</b>
+          <p>Chiuso il draft si scambia liberamente, fino al venerdì.</p>
+        </div>
+      </div>
+      <div class="beat">
+        <time>Ven 20:45</time>
+        <div class="beat-testo">
+          <b>Si schiera e si ricomincia</b>
+          <p>Formazione bloccata alla scadenza della giornata, e da lì riparte tutto.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="rule small dim">
+      Il dettaglio che cambia il gioco: <strong>il draft della prossima giornata gira mentre si sta
+      giocando questa</strong>. Peschi senza sapere come andrà a finire, e l'infortunio del sabato
+      te lo tieni. È voluto.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Le carte</p>
+      <h2>Una copia sola</h2>
+    </div>
+
+    <p class="dim">
+      Ci sono i circa 550 giocatori della Serie A, e ogni giornata ognuno esiste in
+      <strong>una sola copia</strong>. Se Lautaro lo peschi tu, quella settimana nessun altro ce l'ha.
+      Su 300 carte distribuite, più di duecento non le vede nessuno.
+    </p>
+
+    <p class="dim">
+      La rarità non è fissa: si ricalcola ogni settimana su quotazione, rendimento, forma recente,
+      minuti giocati e rischio. Chi si accende sale di fascia, chi sparisce scende.
+    </p>
+
+    <div class="pyramid">
+      <div class="tier-row">
+        <span class="nome" style="color:var(--t-legg)">Leggendaria</span>
+        <div class="barra" style="background:var(--t-legg); width:6%"></div>
+        <span class="conta">~16</span>
+      </div>
+      <div class="tier-row">
+        <span class="nome" style="color:var(--t-epica)">Epica</span>
+        <div class="barra" style="background:var(--t-epica); width:22%"></div>
+        <span class="conta">~66</span>
+      </div>
+      <div class="tier-row">
+        <span class="nome" style="color:var(--t-rara)">Rara</span>
+        <div class="barra" style="background:var(--t-rara); width:55%"></div>
+        <span class="conta">~165</span>
+      </div>
+      <div class="tier-row">
+        <span class="nome" style="color:var(--t-comune)">Comune</span>
+        <div class="barra" style="background:var(--t-comune); width:100%"></div>
+        <span class="conta">~300</span>
+      </div>
+    </div>
+
+    <p class="small dim quiet-rule">
+      La fascia si <strong>congela al momento della pesca</strong>. Se il giocatore crolla la settimana
+      dopo, la tua carta resta quella che era — altrimenti il valore di uno scambio cambierebbe
+      dopo che l'hai accettato.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Il draft</p>
+      <h2>Cinque buste a testa</h2>
+    </div>
+
+    <ul class="plain">
+      <li><strong>25 carte a testa</strong>, cinque buste da cinque.</li>
+      <li><strong>Ordine snake</strong>: primo giro 1→12, secondo 12→1, e così via. L'ordine è l'inverso della classifica, così chi arranca sceglie prima.</li>
+      <li><strong>Il tempo si adatta</strong>: il turno dura fra 20 minuti e 4 ore, calcolato su quanto ne resta. Nei turni infrasettimanali la finestra si stringe da sola.</li>
+      <li><strong>Modalità automatica</strong>: se non hai voglia di aspettare, il sistema sbusta per te appena tocca a te.</li>
+      <li><strong>Nessuno resta a piedi</strong>: le buste garantiscono almeno un portiere, quattro difensori, quattro centrocampisti e due attaccanti. Il minimo per mettere in campo un 4-4-2.</li>
+      <li><strong>Ogni busta ha almeno una Rara</strong>, e la carta migliore esce in quarta posizione. Come nei pacchetti veri.</li>
+    </ul>
+
+    <p class="small dim quiet-rule">
+      Un solo portiere garantito, non due. Con venti titolari in Serie A non resti mai senza — ma
+      chi ne pesca uno solo è vulnerabile, e chi ne ha due ha una merce di scambio vera.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Il mercato</p>
+      <h2>Anche sette per uno</h2>
+    </div>
+
+    <p class="dim">
+      Gli scambi sono liberi e possono essere sbilanciati quanto volete: sette carte per una
+      Leggendaria si può. Non c'è tetto massimo di rosa.
+    </p>
+
+    <div class="cards2">
+      <div class="mini">
+        <h3>L'unico limite</h3>
+        <p>Uno scambio viene rifiutato se lascia <em class="q">una delle due parti</em> senza una formazione possibile: meno di undici carte, nessun portiere, o nessun modulo componibile.</p>
+      </div>
+      <div class="mini">
+        <h3>Il controllo scatta all'accettazione</h3>
+        <p>Non quando proponi. Fra la proposta e la risposta l'altro può aver concluso altri scambi, e la rosa che avevi in mente non è più quella.</p>
+      </div>
+      <div class="mini">
+        <h3>Si autoregola</h3>
+        <p>Chi cede sette carte consolida qualità e si assottiglia; chi accetta si riempie di panchina che non schiererà. Conviene solo a chi è già lungo di rosa.</p>
+      </div>
+      <div class="mini">
+        <h3>Tutto pubblico</h3>
+        <p>Ogni scambio finisce nel feed della lega, coi motivi dei rifiuti. Col sette-per-uno permesso il rischio non è l'equilibrio: è mettersi d'accordo in due.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La formazione</p>
+      <h2>La panchina conta</h2>
+    </div>
+
+    <p class="dim">
+      Sette moduli — 3-4-3, 3-5-2, 4-3-3, 4-4-2, 4-5-1, 5-3-2, 5-4-1 — undici titolari e il resto in
+      panchina. Ma la panchina non è un avanzo: <strong>l'ordine in cui la metti decide chi entra al
+      posto di chi</strong>.
+    </p>
+
+    <p class="dim">
+      Le carte si pescano prima che escano le formazioni ufficiali, quindi ritrovarsi un titolare in
+      tribuna è la norma, non l'eccezione. Chi resta senza voto viene sostituito dalla prima carta in
+      panchina dello stesso ruolo, fino a tre volte. Il modulo non cambia mai.
+    </p>
+
+    <div class="panel">
+      <p class="eyebrow acc">La regola cattiva</p>
+      <p><strong>Portiere senza voto e nessuna riserva in panchina? Voto d'ufficio: 4.</strong></p>
+      <p class="small dim">
+        È quello che dà valore al secondo portiere sul mercato: senza una penalità, non averlo non
+        costerebbe niente e nessuno scambierebbe mai per procurarselo. Nelle prove è scattato in più
+        di metà delle giornate — quindi il secondo portiere sarà merce pregiata davvero.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">I punti</p>
+      <h2>Fantavoto</h2>
+    </div>
+
+    <p class="dim">
+      Voto base più bonus meno malus, come sempre. Il voto base viene dal rendimento del giocatore
+      in quella partita.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Evento</th><th scope="col">Valore</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Gol segnato</td><td class="plus">+3</td></tr>
+          <tr><td>Rigore segnato</td><td class="plus">+3</td></tr>
+          <tr><td>Rigore parato</td><td class="plus">+3</td></tr>
+          <tr><td>Assist</td><td class="plus">+1</td></tr>
+          <tr><td>Ammonizione</td><td class="minus">−0,5</td></tr>
+          <tr><td>Espulsione</td><td class="minus">−1</td></tr>
+          <tr><td>Autorete</td><td class="minus">−2</td></tr>
+          <tr><td>Rigore sbagliato</td><td class="minus">−3</td></tr>
+          <tr><td>Gol subito (portiere)</td><td class="minus">−1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="small dim quiet-rule">
+      <strong>Tutti questi valori si possono cambiare</strong>, anche a stagione in corso e anche per
+      singolo ruolo: si può decidere che il gol di un difensore valga 5, o che il rigore valga meno di
+      un gol su azione. Volendo, si può perfino ribaltare un bonus in malus.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Campionato</p>
+      <h2>Chi vince</h2>
+    </div>
+
+    <p class="dim">
+      Ogni giornata ognuno affronta un altro, e i fantapunti diventano gol come nel fantacalcio di
+      sempre: <strong>il primo a 66, poi uno ogni 6</strong>. Una giornata da 74,5 contro una da 71
+      finisce 2–1; sotto i 66 non si segna, quindi due giornate storte finiscono 0–0.
+    </p>
+
+    <p class="dim">
+      In classifica vanno 3 punti per la vittoria, 1 per il pareggio, 0 per la sconfitta. Le soglie
+      si tarano per stagione, e chi preferisce il sistema secco — vince chi ha più fantapunti — può
+      spegnere i gol dalle regole.
+    </p>
+
+    <p class="dim">
+      Siamo dodici, quindi un girone completo dura 11 giornate. Con due gironi ne occupiamo 22 delle
+      38, e restano parecchie giornate libere per i tornei.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Tornei</p>
+      <h2>Coppe in parallelo</h2>
+    </div>
+
+    <p class="dim">
+      Oltre al campionato si possono aprire quante competizioni si vuole, scegliendo chi partecipa.
+      Usano gli stessi punteggi di giornata, ma non toccano la classifica di campionato.
+    </p>
+
+    <div class="cards2">
+      <div class="mini">
+        <h3>Girone all'italiana</h3>
+        <p>Tutti contro tutti, una o più volte. Vince chi fa più punti.</p>
+      </div>
+      <div class="mini">
+        <h3>Eliminazione diretta</h3>
+        <p>Chi perde è fuori. Se non siete un numero tondo, le teste di serie migliori saltano il primo turno.</p>
+      </div>
+      <div class="mini">
+        <h3>Gironi + eliminazione</h3>
+        <p>Fase a gruppi e poi tabellone fra le qualificate. La vecchia Champions.</p>
+      </div>
+      <div class="mini">
+        <h3>Royal rumble</h3>
+        <p>Nessuna sfida: ogni giornata esce chi ha fatto meno fantapunti. Sopravvive uno solo.</p>
+      </div>
+    </div>
+
+    <p class="small dim">Se vi viene in mente un formato che non c'è, si aggiunge.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La tua squadra</p>
+      <h2>Nome, maglia, stemma</h2>
+    </div>
+
+    <div class="kit">
+      <svg viewBox="0 0 100 100" width="86" height="86" role="img" aria-label="Esempio di stemma">
+        <path d="M50,4 L92,16 V52 Q92,80 50,96 Q8,80 8,52 V16 Z" fill="#0f6b3d" stroke="#f2ede1" stroke-width="3"/>
+        <path d="M58,22 L36,58 L49,58 L44,84 L69,48 L55,48 Z" fill="#f0c419"/>
+      </svg>
+
+      <svg viewBox="0 0 100 112" width="96" height="108" role="img" aria-label="Esempio di maglia">
+        <defs>
+          <clipPath id="corpo">
+            <path d="M28,10 L40,5 Q50,12 60,5 L72,10 L92,24 L84,43 L74,35 L74,105 L26,105 L26,35 L16,43 L8,24 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M28,10 L40,5 Q50,12 60,5 L72,10 L92,24 L84,43 L74,35 L74,105 L26,105 L26,35 L16,43 L8,24 Z" fill="#6b1220"/>
+        <g clip-path="url(#corpo)">
+          <rect x="-30" y="38" width="160" height="24" fill="#d4a04a" transform="rotate(-38 50 50)"/>
+        </g>
+        <path d="M40,5 Q50,12 60,5 L58,13 Q50,18 42,13 Z" fill="#f2ede1"/>
+        <path d="M92,24 L84,43 L78,39 L86,21 Z" fill="#f2ede1"/>
+        <path d="M8,24 L16,43 L22,39 L14,21 Z" fill="#f2ede1"/>
+        <text x="50" y="64" text-anchor="middle" fill="#f2ede1" font-family="ui-monospace, monospace"
+              font-size="7.5" font-weight="700" textLength="40" lengthAdjust="spacingAndGlyphs">IDROBAR</text>
+        <text x="50" y="90" text-anchor="middle" fill="#f2ede1" font-family="ui-sans-serif, sans-serif"
+              font-size="30" font-weight="900">7</text>
+      </svg>
+    </div>
+
+    <p class="dim">
+      Ognuno si costruisce la propria: nome della squadra e allenatore, maglia fra dodici palette e
+      sette stili — righe, cerchiati, banda, fascia diagonale, quarti — stemma con forma e simbolo,
+      oppure il tuo logo caricato. E lo sponsor sul petto: scritto da te, scelto fra i modelli, o
+      caricato anche quello.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">E poi</p>
+      <h2>Le altre cose</h2>
+    </div>
+
+    <ul class="plain">
+      <li><strong>La giornata dal vivo</strong>: le partite vere di Serie A con accanto a ogni giocatore il suo fantavoto e di chi è la carta. Le tue in evidenza.</li>
+      <li><strong>Chi sale e chi scende</strong>: le carte che hanno guadagnato o perso più posizioni nella settimana, e chi ha cambiato fascia.</li>
+      <li><strong>Il migliore in campo</strong> di ogni squadra, giornata per giornata.</li>
+      <li><strong>Chi capita sempre a chi</strong>: dopo qualche settimana si scopre che a qualcuno lo stesso attaccante è uscito sei volte su dieci.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow acc">Serve una decisione</p>
+      <h2>Prima di partire</h2>
+    </div>
+
+    <div class="panel">
+      <h3>I voti costano</h3>
+      <p class="dim small">
+        I dati delle partite arrivano da un servizio esterno. Il piano gratuito non copre la stagione
+        in corso — solo quelle vecchie — e le alternative gratuite <em class="q">non hanno i voti dei
+        giocatori</em>, solo gol e cartellini.
+      </p>
+      <p class="dim small">
+        Il piano che serve costa <strong>19 $ al mese</strong>: divisi in dodici fanno circa
+        <strong>1,60 $ a testa</strong>, sui 15 € a persona per una stagione intera.
+      </p>
+      <p class="dim small">
+        Senza voti si giocherebbe lo stesso, ma diventerebbe tutto «da bonus»: un centrocampista che
+        gioca bene senza segnare varrebbe quanto uno che passeggia, e le carte rare finirebbero per
+        essere quasi solo attaccanti.
+      </p>
+    </div>
+
+    <div class="cards2">
+      <div class="mini">
+        <h3>Da che giornata cominciamo</h3>
+        <p>Con due gironi servono 22 giornate, quindi si può partire fino alla 17ª e restare dentro la stagione.</p>
+      </div>
+      <div class="mini">
+        <h3>Due gironi o tre</h3>
+        <p>Due ne occupano 22 e lasciano spazio ai tornei. Tre sarebbero 33 e riempirebbero quasi tutto.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="eyebrow">Fantasbusta</p>
+    <p class="small dim">
+      Il gioco è già costruito e funziona: si è fatta girare una stagione di prova con dodici squadre
+      finte, e il ciclo completo — sbustamento, scambi, formazioni, punteggi, classifica — regge.
+      Manca solo mettersi d'accordo su quanto sopra.
+    </p>
+  </div>
+</footer>
+
+</html>

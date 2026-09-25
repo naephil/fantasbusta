@@ -1,0 +1,63 @@
+# Rete di sicurezza per quando la radice del sito punta QUI invece che a public/.
+#
+# È la configurazione sbagliata ma facilissima da fare, perché nel pannello si
+# sceglie una cartella e quella che si è appena caricata è questa. Senza questo
+# file le conseguenze sono due, ed entrambe si presentano male:
+#
+#   - la home risponde «Forbidden», perché qui dentro non c'è nessun indice;
+#   - TUTTO l'albero diventa scaricabile dal web — vendor/, deploy/, docs/,
+#     composer.lock — e con lui il .env, dove stanno la password del database e
+#     la chiave API. Che Apache blocchi da sé i nomi che iniziano per punto è
+#     una fortuna, non una difesa: dipende da com'è configurato l'hosting.
+#
+# ⚠️ Questa resta la seconda scelta. La prima è puntare la radice del sito — o
+# di un sottodominio — direttamente su .../sbusta/public: lì tutto il resto è
+# irraggiungibile per costruzione, e non c'è nessun file di regole che qualcuno
+# possa cancellare per sbaglio. Con la radice giusta questo file non viene
+# nemmeno letto, e tenerlo non costa niente.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ── 1. Prima di tutto: sbarrare quello che non deve uscire ──
+    #
+    # Va PRIMA della riscrittura, altrimenti una richiesta a /.env troverebbe il
+    # file davvero esistente e lo servirebbe senza passare di qui.
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^\.env\. - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|docs|deploy|lang|resources|routes|tests|vendor)/ - [F,L]
+
+    # ⚠️ `storage/` NON si sbarra in blocco, e la differenza si vede solo in
+    # produzione: `/storage/…` è anche l'indirizzo **pubblico** dei file
+    # caricati — stemmi e sponsor — perché `public/storage` è un link simbolico
+    # a `storage/app/public`. Bloccando tutto il ramo, ogni logo caricato
+    # rispondeva «Forbidden» e sembrava che l'upload non funzionasse, mentre il
+    # file era lì e a non funzionare era la regola che lo serviva.
+    #
+    # Si sbarrano quindi i tre rami veri, dove stanno log, cache e sessioni; il
+    # resto passa e la riscrittura qui sotto lo manda in `public/storage/`.
+    RewriteRule ^storage/(app|framework|logs)/ - [F,L]
+    RewriteRule ^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit.*\.xml|vite\.config\.js|README\.md)$ - [F,L]
+    RewriteRule ^\.(git|github|env|editorconfig|gitignore|gitattributes) - [F,L]
+
+    # ── 2. Poi: mandare tutto il resto dentro public/ ──
+    #
+    # La cartella public/ non compare nell'indirizzo: chi visita /draft finisce
+    # su public/index.php senza accorgersene.
+    RewriteCond %{REQUEST_URI} !^/.*/?public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Cintura oltre alle bretelle: se mod_rewrite non ci fosse, le regole qui sopra
+# verrebbero saltate in silenzio. Questi due blocchi valgono comunque.
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^(artisan|composer\.json|composer\.lock|package\.json|package-lock\.json)$">
+    Require all denied
+</FilesMatch>
+
+# Niente elenchi di cartelle: senza questo, una cartella priva di indice
+# mostrerebbe il proprio contenuto a chiunque.
+Options -Indexes

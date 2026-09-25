@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    La suite contro MariaDB, la stessa di Hostpoint.
+
+    SQLite è comodo e veloce, ma non è il database su cui il gioco girerà: gli
+    enum li tratta come testo libero, le chiavi esterne le controlla solo se
+    glielo si chiede, e soprattutto `lockForUpdate()` è un'istruzione muta —
+    tutti i test di concorrenza passano senza aver mai esercitato un lock.
+
+    Si lancia con:
+
+        php artisan test -c phpunit-mariadb.xml
+
+    Serve un MariaDB in ascolto sulla porta indicata qui sotto: in sviluppo lo
+    si tira su con Docker, immagine mariadb:10.11, porta 33061, database
+    "fantasbusta", utente "fanta" con password "fanta". La riga di comando sta
+    in docs/AVVIO-LOCALE.md e non qui, perche' un commento XML non puo'
+    contenere due trattini di fila e le opzioni di Docker ne sono piene.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="API_FOOTBALL_INTERVAL" value="0"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+
+        <env name="DB_CONNECTION" value="mariadb"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="33061"/>
+        <env name="DB_DATABASE" value="fantasbusta"/>
+        <env name="DB_USERNAME" value="fanta"/>
+        <env name="DB_PASSWORD" value="fanta"/>
+        <env name="DB_URL" value=""/>
+
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

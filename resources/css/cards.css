@@ -1,0 +1,704 @@
+/* ═══════════════════════════════════════════════════════════
+   FANTASBUSTA — carta e apertura busta
+   Portato da prototypes/card.html senza modifiche alla resa.
+
+   Resta CSS d'autore invece di utility Tailwind per una ragione
+   precisa: ogni misura interna è in `cqw`, cioè in percentuale
+   della larghezza della carta. È ciò che permette alla stessa
+   carta di rendere identica a 320px sul palco del draft, 180px
+   in rosa e 110px in formazione, senza mai tagliare un cognome.
+   Tradotto in classi di utilità diventerebbe illeggibile e
+   perderebbe proprio la proprietà che lo rende utile.
+   ═══════════════════════════════════════════════════════════ */
+
+:root{
+  --ink:var(--color-ink); --ink-2:var(--color-ink-2); --ink-3:var(--color-ink-3);
+  --paper:var(--color-paper); --paper-dim:var(--color-paper-dim);
+  --rosso:var(--color-rosso);
+  --r-P:var(--color-ruolo-p); --r-D:var(--color-ruolo-d);
+  --r-C:var(--color-ruolo-c); --r-A:var(--color-ruolo-a);
+  --card-w:300px; --radius:19px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+
+/* ═══════════ CARTA ═══════════
+   Ogni misura interna è in `cqw` = 1% della larghezza della carta.
+   Così la stessa carta rende identica a 320px (palco del draft),
+   180px (rosa) o 110px (formazione), senza mai tagliare il testo.
+   Il container sta sullo `.slot` e non sulla `.card`: il containment
+   forzerebbe `transform-style: flat` e romperebbe il giro in 3D. */
+.slot{ width:var(--card-w); aspect-ratio:5/7; perspective:1300px; container-type:inline-size }
+.slot.sealed{ animation:drop .8s var(--ease) backwards }
+@keyframes drop{ 0%{ opacity:0; transform:translateY(30px) scale(.84) } 100%{ opacity:1; transform:none } }
+
+.card{
+  --accent:#8a929e; --panel:#d8dce2; --sheen:0;
+  position:relative; width:100%; height:100%; cursor:pointer;
+  transform-style:preserve-3d;
+  transform: rotateX(var(--rx,0deg)) rotateY(calc(var(--ry,0deg) + var(--flip,0deg)));
+  transition:transform .6s var(--ease);
+}
+.card.flipped{ --flip:180deg }
+
+.face{
+  position:absolute; inset:0; border-radius:6.3cqw; overflow:hidden;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  background:linear-gradient(168deg,var(--ink-3),var(--ink-2) 55%,var(--ink));
+  box-shadow:0 18px 44px -18px rgba(0,0,0,.95),
+             inset 0 0 0 1px color-mix(in srgb,var(--accent) 34%,transparent);
+}
+.face.back{ transform:rotateY(180deg) }
+.frame{ position:absolute; inset:2.7cqw; z-index:8; pointer-events:none; border-radius:4cqw;
+  border:1px solid color-mix(in srgb,var(--accent) 40%,transparent) }
+.foil{ position:absolute; inset:0; z-index:7; pointer-events:none; border-radius:6.3cqw;
+  opacity:calc(var(--sheen)*.85); mix-blend-mode:color-dodge;
+  background:radial-gradient(circle 73cqw at var(--mx,50%) var(--my,50%),
+    color-mix(in srgb,var(--accent) 60%,#fff) 0%, transparent 62%) }
+
+/* ── FOTO: serigrafia su blocco di colore ──
+   `multiply` fa sparire il fondo bianco dentro il pannello.
+   Sotto la foto NON va nulla: qualunque texture traspare sul volto. */
+.shot{
+  position:absolute; top:0; left:0; right:0; height:62%; z-index:1; overflow:hidden;
+  background:var(--panel);
+  clip-path:polygon(0 0, 100% 0, 100% 82%, 0 100%);
+}
+/* ⚠️ Il ritratto occupa la parte SINISTRA, non tutta la larghezza.
+   I ritratti dell'API sono quadrati. In un riquadro più largo che alto —
+   com'era prima, tutta la carta per il 62% dell'altezza — `cover` ritaglia in
+   verticale, e con `object-position:top` il taglio cadeva interamente sul
+   mento: nel listone le facce si vedevano intere, sulle carte erano decapitate
+   in basso. Qui il riquadro è più alto che largo, quindi il ritaglio è
+   orizzontale e si mangia le spalle, che non guarda nessuno. */
+.shot img{
+  position:absolute; left:0; top:0; width:66%; height:100%;
+  object-fit:cover; object-position:center 15%;
+  mix-blend-mode:multiply; filter:contrast(1.12) saturate(1.06);
+  transition:transform .7s var(--ease);
+}
+.card:hover .shot img{ transform:scale(1.05) }
+
+.fallback{ position:absolute; inset:0 34% 0 0; display:grid; place-items:center;
+  background:repeating-linear-gradient(-52deg, transparent 0 4.3cqw, rgba(0,0,0,.07) 4.3cqw 8.6cqw) }
+.fallback span{ font-family:'Big Shoulders Display',sans-serif; font-weight:900; font-size:26cqw;
+  line-height:1; color:rgba(0,0,0,.3); letter-spacing:-.05em; transform:skewX(-7deg) }
+
+/* ── La colonna di destra ──
+   Power, iniziali, ruolo e rarita' incolonnati nella fascia che il ritratto
+   lascia libera. Ruolo e rarita' stavano in alto a sinistra, cioe' sopra la
+   faccia: la coprivano proprio dove si guarda. Qui non si sovrappone piu'
+   niente, e ogni elemento ha spazio per essere grande abbastanza da leggersi. */
+.rail{ position:absolute; top:0; right:0; z-index:5; width:34%; height:62%;
+  display:flex; flex-direction:column; align-items:center; gap:1.5cqw;
+  padding:4cqw 3cqw 0; text-align:center }
+
+.power{ line-height:.84 }
+.power .n{ font-family:'Big Shoulders Display',sans-serif; font-weight:900; font-size:17cqw;
+  color:var(--ink); text-shadow:0 1px 0 rgba(255,255,255,.35) }
+.power .l{ font-family:'Chivo Mono',monospace; font-size:3.4cqw; font-weight:700;
+  letter-spacing:.2em; color:rgba(0,0,0,.62); text-transform:uppercase }
+
+/* Le iniziali salgono e si assottigliano: sono lo sfondo della colonna, non il
+   suo contenuto, e devono lasciare aria a quello che sta sotto. */
+.sigla{ font-family:'Big Shoulders Display',sans-serif; font-weight:900; font-size:19cqw;
+  line-height:.86; color:rgba(0,0,0,.2); letter-spacing:-.06em;
+  transform:skewX(-7deg); pointer-events:none }
+
+.badges{ display:flex; flex-direction:column; align-items:stretch; gap:1.2cqw; width:100% }
+.role{ background:var(--role); color:#08080a; border-radius:1cqw;
+  font-family:'Big Shoulders Display',sans-serif; font-weight:900; font-size:8cqw;
+  line-height:1; padding:1.4cqw 0 .8cqw; display:grid; place-items:center }
+.tier{ font-family:'Chivo Mono',monospace; font-size:3.6cqw; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; background:var(--accent); color:var(--ink);
+  padding:1.4cqw 1cqw 1.1cqw; border-radius:1cqw; display:grid; place-items:center }
+
+.id{ position:absolute; left:0; right:0; bottom:24cqw; z-index:5; padding:0 5.7cqw }
+.band{ position:absolute; left:-3.3cqw; right:-3.3cqw; top:1.3cqw; bottom:-2cqw; z-index:-1;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 90%,transparent),transparent 92%);
+  transform:skewY(-2.4deg); opacity:.2 }
+.first{ font-family:'Chivo Mono',monospace; font-size:4cqw; font-weight:600; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--accent) }
+/* Il corpo si riduce sui cognomi lunghi: "Kvaratskhelia" a piena misura
+   sfonderebbe la carta a qualunque scala, perché il rapporto non cambia. */
+.last{ font-family:'Big Shoulders Display',sans-serif; font-weight:900;
+  font-size:13.3cqw; line-height:.86; text-transform:uppercase; letter-spacing:-.015em;
+  white-space:nowrap }
+.last[data-len="med"] { font-size:10.8cqw }
+.last[data-len="long"]{ font-size:8.9cqw; letter-spacing:-.03em }
+.club{ display:flex; align-items:center; gap:2.3cqw; margin-top:2.7cqw; font-size:4.2cqw;
+  font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--paper-dim) }
+.club i{ width:4.7cqw; height:.7cqw; background:var(--club); flex:none }
+.club .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.trend{ margin-left:auto; flex:none; font-family:'Chivo Mono',monospace; font-size:3.4cqw;
+  font-weight:700; letter-spacing:.11em; text-transform:uppercase; padding:1cqw 2.3cqw;
+  border-radius:1cqw; border:1px solid currentColor; white-space:nowrap }
+.trend.up  { color:#38d47a; background:rgba(56,212,122,.12) }
+.trend.down{ color:#f0564a; background:rgba(240,86,74,.12) }
+.trend.flat{ color:var(--paper-dim); background:rgba(168,162,148,.1) }
+
+.stats{ position:absolute; left:0; right:0; bottom:0; z-index:5; display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border-top:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+  background:linear-gradient(to top,rgba(0,0,0,.5),transparent) }
+.stat{ padding:3.7cqw 2cqw 5cqw; text-align:center; position:relative }
+.stat+.stat::before{ content:''; position:absolute; left:0; top:22%; bottom:22%; width:1px;
+  background:color-mix(in srgb,var(--accent) 24%,transparent) }
+.stat .v{ font-family:'Chivo Mono',monospace; font-weight:700; font-size:6cqw }
+.stat .k{ font-family:'Chivo Mono',monospace; font-size:3.1cqw; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--paper-dim); margin-top:1cqw }
+.v.up{ color:#38d47a } .v.down{ color:#f0564a }
+
+/* ═══ VERSO — identico su tutti i tier, altrimenti si saprebbe cosa c'è sotto ═══
+
+   Rifatto come il dorso di una carta da collezione vera, che è un oggetto
+   COMPOSTO: cornice stampata, campo, pannello centrale, marchio. Prima era una
+   raggiera che correva fino al bordo, e per quanto fosse elegante restava una
+   texture — un fondale, non un dorso. La differenza si sente girando la carta:
+   una texture ruota, un dorso stampato si presenta.
+
+   Le misure sono in `cqw` come tutto il resto della carta, quindi il verso
+   regge identico a 320px sul palco del draft e a 110px nella formazione. */
+.face.back{
+  background:radial-gradient(circle at 50% 44%, #23232d 0%, #131319 60%, #0a0a0d 100%);
+  box-shadow:0 18px 44px -18px rgba(0,0,0,.95), inset 0 0 0 1px rgba(224,39,24,.32);
+}
+
+/* La cornice: rosso spesso col filo crema all'interno, come il bordo colorato
+   di una carta stampata. È lei a dare il senso di «oggetto» che mancava. */
+.face.back::before{
+  content:''; position:absolute; inset:3.4cqw; border-radius:3.2cqw;
+  border:2.4cqw solid var(--rosso);
+  box-shadow:
+    inset 0 0 0 .55cqw rgba(242,237,225,.5),
+    inset 0 0 5cqw rgba(0,0,0,.55),
+    0 0 0 .3cqw rgba(0,0,0,.55);
+  background:linear-gradient(158deg, rgba(255,255,255,.07), transparent 42%);
+  pointer-events:none;
+}
+
+/* Il pannello centrale. La raggiera vive QUI DENTRO e non su tutta la carta:
+   confinata, smette di essere fondale e diventa il campo del marchio. */
+.back .rings{
+  position:absolute; inset:9.4cqw; border-radius:1.8cqw; overflow:hidden;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%,
+      rgba(224,39,24,.22) 0 2.1deg, transparent 2.1deg 8deg),
+    radial-gradient(circle at 50% 50%, rgba(224,39,24,.34) 0%, transparent 64%),
+    linear-gradient(180deg, #1c1c24, #0e0e13);
+  box-shadow:inset 0 0 0 1px rgba(242,237,225,.1), inset 0 5cqw 11cqw rgba(0,0,0,.5);
+}
+/* I due anelli concentrici, sopra la raggiera: danno un centro allo sguardo. */
+.back .rings::after{
+  content:''; position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 25.5%, rgba(242,237,225,.16) 26%, transparent 27%),
+    radial-gradient(circle at 50% 50%, transparent 35%, rgba(224,39,24,.5) 35.6%, transparent 36.6%);
+}
+
+/* La rosetta dentro il pannello: raggi, anelli e micro-testo circolare. È il
+   mestiere della stampa di pregio — francobolli, figurine, banconote — cioè di
+   tutte le cose fatte per essere guardate da vicino. Il cerchio centrale prima
+   era vuoto e il monogramma ci galleggiava sopra senza appoggiarsi a niente. */
+.back .rosetta{ position:absolute; inset:0; z-index:1; overflow:visible }
+.back .rosetta .raggi line{ stroke:rgba(242,237,225,.13); stroke-width:.5 }
+.back .rosetta .anello{ fill:none; stroke:rgba(224,39,24,.55); stroke-width:.9 }
+.back .rosetta .anello.sottile{ stroke:rgba(242,237,225,.22); stroke-width:.45 }
+.back .rosetta .campo{ fill:rgba(10,10,13,.55) }
+.back .rosetta .giro{
+  fill:rgba(242,237,225,.4); font-family:'Chivo Mono',monospace;
+  font-size:4.1px; letter-spacing:.9px;
+}
+
+.back .mono{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:2 }
+/* Il monogramma sta DENTRO il cerchio, quindi è più piccolo di prima: adesso
+   ha un fondo su cui appoggiarsi e non gli serve riempire la carta da solo.
+   La parola «Fantasbusta» è uscita da qui — la dice il micro-testo che gira. */
+.back .mono b{ display:block; font-family:'Big Shoulders Display',sans-serif; font-weight:900;
+  font-size:17.5cqw; line-height:.8; color:var(--paper); transform:skewX(-9deg);
+  text-shadow:0 .5cqw 0 rgba(0,0,0,.7), 0 0 6cqw rgba(224,39,24,.8) }
+.back .mono b em{ font-style:normal; color:var(--rosso) }
+
+/* Gli angoli stanno nella fascia fra cornice e pannello, non nel campo del
+   marchio: è lì che una carta stampata mette i suoi fregi, e da lì non
+   disturbano il logo. */
+.back .corner{ position:absolute; width:5.4cqw; height:5.4cqw; z-index:2;
+  border:.5cqw solid rgba(242,237,225,.42) }
+.back .corner.tl{ top:6.4cqw; left:6.4cqw; border-right:0; border-bottom:0 }
+.back .corner.tr{ top:6.4cqw; right:6.4cqw; border-left:0; border-bottom:0 }
+.back .corner.bl{ bottom:6.4cqw; left:6.4cqw; border-right:0; border-top:0 }
+.back .corner.br{ bottom:6.4cqw; right:6.4cqw; border-left:0; border-top:0 }
+
+/* ═══════════ TIER ═══════════
+
+   Sotto la Comune ci sono due fasce di scarto, e devono LEGGERSI come scarto:
+   fango e ruggine, pannello spento, nessun riflesso. La Comune è una carta
+   onesta — argento — e confonderla con un pacco toglierebbe senso a entrambe.
+   È anche il motivo per cui non basta un colore più scuro: la lucentezza a
+   zero è ciò che si nota prima del colore, quando la carta gira. */
+.card[data-tier="monnezza"]   { --accent:#4a4640; --panel:#9d9992; --sheen:0 }
+.card[data-tier="pacco"]      { --accent:#7a6a4f; --panel:#c4b79c; --sheen:.04 }
+.card[data-tier="comune"]     { --accent:#8a929e; --panel:#d5d9df; --sheen:.10 }
+.card[data-tier="rara"]       { --accent:#2ec4f1; --panel:#bde6f8; --sheen:.32 }
+.card[data-tier="epica"]      { --accent:#f0157a; --panel:#f8c6dc; --sheen:.55 }
+.card[data-tier="leggendaria"]{ --accent:#ffb703; --panel:#ffe4a8; --sheen:.85 }
+
+.card[data-tier="leggendaria"] .front{ animation:pulse 3.4s ease-in-out infinite }
+.card[data-tier="leggendaria"] .holo{
+  position:absolute; inset:0; z-index:6; pointer-events:none; mix-blend-mode:overlay; opacity:.55;
+  background:linear-gradient(114deg, transparent 38%, rgba(255,255,255,.9) 47%,
+    rgba(255,214,102,.65) 51%, transparent 60%);
+  background-size:280% 100%; animation:sweep 4.6s ease-in-out infinite }
+@keyframes sweep{ 0%,72%{ background-position:190% 0 } 100%{ background-position:-90% 0 } }
+@keyframes pulse{
+  0%,100%{ box-shadow:0 18px 44px -18px rgba(0,0,0,.95), inset 0 0 0 1px rgba(255,183,3,.4), 0 0 0 0 rgba(255,183,3,.3) }
+  50%    { box-shadow:0 18px 44px -18px rgba(0,0,0,.95), inset 0 0 0 1px rgba(255,183,3,.7), 0 0 36px 6px rgba(255,183,3,.18) }
+}
+
+/* ══════════════════════════════════════════
+   APERTURA BUSTA
+   ══════════════════════════════════════════ */
+.overlay{
+  position:fixed; inset:0; z-index:150; display:none; place-items:center;
+  background:radial-gradient(ellipse at 50% 40%, rgba(30,30,40,.9), rgba(6,6,9,.97) 70%);
+  backdrop-filter:blur(10px);
+}
+.overlay.on{ display:grid }
+.stage{ position:relative; display:grid; place-items:center; gap:26px; width:100%; padding:24px }
+
+/* ── La bustina sigillata ──
+
+   Rifatta per leggersi come un pacchetto di figurine, non come un rettangolo
+   lucido. Tre cose la fanno riconoscere, e sono tutte fisiche:
+
+   ① La LAMINA è verticale. Le buste si stampano su rotoli e la luce le
+      percorre per il lungo: la diagonale di prima faceva un bel gradiente ma
+      diceva «pannello», non «foglio d'alluminio».
+   ② I bordi CRIMPATI sopra e sotto. È la saldatura a caldo — una fascia di
+      rigature verticali fitte — ed è il dettaglio che il cervello riconosce
+      per primo.
+   ③ Il pacchetto è un TUBO: ha una lucentezza speculare al centro e due
+      ombre lungo i lati, che è ciò che gli dà volume.
+
+   ⚠️ La busta è fatta di DUE pezzi, coperchio (`.plid`) e corpo (`.pbody`),
+   e non di uno solo con la saldatura appoggiata sopra. È il taglio a
+   volerlo: si taglia LUNGO una riga, e perché la striscia si stacchi davvero
+   — si sollevi man mano che la lama avanza e poi voli via da sola — deve
+   essere un elemento a sé, con la sua lamina e il suo bordo. Prima la busta
+   aveva `overflow:hidden` e la saldatura che «volava via» spariva in realtà
+   sotto il proprio bordo dopo pochi pixel.
+
+   La lamina è la stessa su entrambi i pezzi, ed è orizzontale: così la
+   giuntura non si vede finché non si taglia, che è il punto.
+
+   Le misure vanno in `cqw` sul contenitore, così la busta regge anche sul
+   telefono dove non ci starebbe a 236px fissi. `--lid` è l'altezza del
+   coperchio, cioè la quota della riga di taglio; `--cut` va da 0 a 1 ed è
+   quanto si è già tagliato — lo scrive il JavaScript seguendo il dito. */
+.pouch{
+  --lid:11cqw; --cut:0;
+  position:relative; width:min(236px, 64vw); aspect-ratio:5/7; cursor:pointer;
+  container-type:inline-size;
+  touch-action:none; user-select:none; -webkit-user-select:none;
+  transition:transform .3s var(--ease);
+  animation:float 3.6s ease-in-out infinite;
+}
+.pouch:hover{ transform:translateY(-6px) rotate(-1.5deg) scale(1.02) }
+/* Mentre si taglia la busta sta ferma: è tenuta in mano. */
+.pouch.cutting{ animation-play-state:paused; transform:none }
+
+.pouch .plid, .pouch .pbody{
+  position:absolute; left:0; right:0; overflow:hidden;
+  background:
+    /* ombre laterali: il pacchetto si incurva verso i bordi */
+    linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 14%,
+                    transparent 86%, rgba(0,0,0,.6) 100%),
+    /* bande metalliche verticali */
+    linear-gradient(90deg,
+      #15151b 0%, #2b2b36 7%, #56566c 14%, #918fa8 20%, #4a4a5c 27%,
+      #2c2c38 38%, #6f6d88 50%, #b0aac2 56%, #4e4c60 64%,
+      #2a2a34 76%, #59576e 86%, #22222b 94%, #131319 100%);
+}
+.pouch .pbody{
+  top:var(--lid); bottom:0; z-index:1; border-radius:0 0 5px 5px;
+  box-shadow:0 26px 60px -20px rgba(0,0,0,.95), inset 0 0 0 1px rgba(255,255,255,.16);
+}
+/* Il coperchio si solleva dal lato già tagliato, incernierato a destra dove il
+   taglio non è ancora arrivato. Poco: è un lembo che si alza, non un'anta. */
+.pouch .plid{
+  top:0; height:var(--lid); z-index:3; border-radius:5px 5px 0 0;
+  transform-origin:100% 100%;
+  transform:translate(0, calc(var(--cut) * -1.2cqw)) rotate(calc(var(--cut) * -2.5deg));
+  transition:transform .15s ease-out;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),
+             0 calc(var(--cut) * 2cqw) calc(var(--cut) * 4cqw) rgba(0,0,0,.6);
+}
+
+/* Il riflesso che scorre sulla lamina: è quello che la fa sembrare metallo
+   invece che carta grigia. Lento, perché deve accompagnare l'attesa e non
+   chiamare l'attenzione su di sé. Sta su entrambi i pezzi perché la lamina è
+   una sola: quasi verticale, quindi la giuntura non lo spezza. */
+.pouch .plid::after, .pouch .pbody::after{
+  content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
+  /* Sopra a tutto e in `overlay`: sulla busta vera il marchio è stampato SULLA
+     lamina, quindi il riflesso ci passa sopra insieme al resto. Passandogli
+     sotto sembrerebbe un vetro appoggiato davanti. */
+  mix-blend-mode:overlay;
+  background:linear-gradient(104deg, transparent 36%, rgba(255,255,255,.34) 46%,
+             rgba(255,255,255,.62) 50%, rgba(255,255,255,.2) 55%, transparent 64%);
+  background-size:260% 100%;
+  animation:sweep 5.2s ease-in-out infinite;
+}
+
+/* La luce che filtra dalla fessura: si allarga con il taglio. Dice che dentro
+   c'è qualcosa, prima ancora che esca. */
+.pouch .pbody::before{
+  content:''; position:absolute; left:0; top:0; height:14cqw; z-index:4; pointer-events:none;
+  width:calc(var(--cut) * 100%); opacity:var(--cut);
+  background:linear-gradient(180deg, rgba(255,222,140,.6), rgba(255,200,90,.15) 55%, transparent);
+}
+
+/* La saldatura, sopra e sotto: rigature fitte su una fascia più scura. */
+.pouch .pcrimp{
+  position:absolute; left:0; right:0; height:7.5cqw; z-index:2;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(0,0,0,.5) 0 1px, rgba(255,255,255,.13) 1px 2px, transparent 2px 3.5px),
+    linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.16));
+}
+.pouch .pcrimp.top{ top:0; box-shadow:0 1px 0 rgba(0,0,0,.6), 0 2px 5px rgba(0,0,0,.45) }
+.pouch .pcrimp.bottom{ bottom:0; transform:scaleY(-1);
+  box-shadow:0 1px 0 rgba(0,0,0,.6), 0 2px 5px rgba(0,0,0,.45) }
+
+/* «Taglia qui»: la riga tratteggiata sul bordo del coperchio, che è ANCHE la
+   riga su cui passa la lama. Le forbici stanno a sinistra, dove il taglio
+   comincia, e la freccia dice da che parte si va. */
+.pouch .ptear{
+  position:absolute; top:7.5cqw; bottom:0; left:0; right:0; z-index:2;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 3cqw;
+  font-family:'Chivo Mono',monospace; font-size:2.6cqw; letter-spacing:.28em;
+  text-transform:uppercase; color:rgba(255,255,255,.5);
+  border-bottom:1px dashed rgba(255,255,255,.3);
+}
+
+/* ── La lama ──
+   La riga incandescente che segue il dito lungo il taglio, con la punta che
+   brilla. È la cosa che si guarda mentre si taglia, quindi è l'unica cosa
+   davvero luminosa della scena. `width` in transizione perché il dito salta
+   — soprattutto al primo tocco — e la lama invece scorre. */
+.pouch .pcut{
+  position:absolute; left:0; top:var(--lid); z-index:6; pointer-events:none;
+  height:2px; margin-top:-1px;
+  width:calc(var(--cut) * 100%);
+  opacity:clamp(0, calc(var(--cut) * 25), 1);
+  background:linear-gradient(90deg, rgba(255,240,200,0), #fff3c4 30%, #fff);
+  box-shadow:0 0 6px 1px rgba(255,214,102,.9), 0 0 18px 4px rgba(255,160,40,.45);
+  transition:width .15s ease-out;
+}
+.pouch .pcut::after{
+  content:''; position:absolute; right:-5px; top:50%; width:10px; height:10px; margin-top:-5px;
+  border-radius:50%; background:#fff;
+  box-shadow:0 0 10px 3px #fff, 0 0 26px 8px rgba(255,190,60,.7);
+}
+
+/* Le scintille: le sputa la lama mentre avanza e la carta quando si scopre
+   rara. Nascono dove le mette il JavaScript e volano di `--dx`/`--dy`; il
+   colore è `currentColor`, così la stessa scintilla è dorata sulla lama e del
+   colore del tier intorno alla carta. */
+.spark{
+  position:absolute; z-index:7; width:4px; height:4px; margin:-2px; border-radius:50%;
+  pointer-events:none; background:#fff; color:#ffd866;
+  box-shadow:0 0 6px 2px currentColor;
+  animation:spark .6s ease-out forwards;
+}
+@keyframes spark{
+  0%   { opacity:1; transform:translate(0,0) scale(1) }
+  100% { opacity:0; transform:translate(var(--dx), var(--dy)) scale(.15) }
+}
+
+/* ── La banda diagonale ──
+   È la firma dei pacchetti di figurine italiani, e insieme il pezzo che toglie
+   alla busta l'aria di rettangolo anonimo: taglia il campo, dà una direzione,
+   e porta il nome. Le due righe di micro-testo sopra e sotto sono la rifinitura
+   che la fa sembrare stampata invece che disegnata. */
+.pouch .pband{
+  position:absolute; left:-12%; right:-12%; top:31%; z-index:2;
+  transform:rotate(-7deg);
+  padding:2.6cqw 0;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--rosso) 55%, #7a0f08) 0%,
+    var(--rosso) 22%, #ff4636 50%, var(--rosso) 78%,
+    color-mix(in srgb, var(--rosso) 55%, #7a0f08) 100%);
+  box-shadow:0 1.2cqw 3cqw rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.25);
+  text-align:center;
+}
+.pouch .pband b{
+  display:block; font-family:'Big Shoulders Display',sans-serif; font-weight:900;
+  font-size:14cqw; line-height:.84; letter-spacing:.02em; color:var(--paper);
+  text-transform:uppercase; text-shadow:0 .5cqw 0 rgba(0,0,0,.45);
+}
+.pouch .pband b em{ font-style:normal; color:#0b0b0e }
+/* Il filo di micro-testo che corre lungo i due bordi della banda. */
+.pouch .pband::before, .pouch .pband::after{
+  content:'FANTASBUSTA · SERIE A · FANTASBUSTA · SERIE A · FANTASBUSTA · SERIE A';
+  position:absolute; left:0; right:0; overflow:hidden; white-space:nowrap;
+  font-family:'Chivo Mono',monospace; font-size:1.9cqw; letter-spacing:.3em;
+  color:rgba(255,255,255,.5);
+}
+.pouch .pband::before{ top:.5cqw } .pouch .pband::after{ bottom:.5cqw }
+
+/* Gli angoli sono gli STESSI del verso delle carte: è quello che fa capire, in
+   mezzo secondo e senza pensarci, che dentro la busta ci sono quelle carte lì.
+   Stanno nel corpo, quindi le quote «alte» si contano dal taglio in giù. */
+.pouch .pcorner{ position:absolute; width:6cqw; height:6cqw; z-index:2;
+  border:.55cqw solid rgba(242,237,225,.4) }
+.pouch .pcorner.tl{ top:2.5cqw; left:4.5cqw; border-right:0; border-bottom:0 }
+.pouch .pcorner.tr{ top:2.5cqw; right:4.5cqw; border-left:0; border-bottom:0 }
+.pouch .pcorner.bl{ bottom:11cqw; left:4.5cqw; border-right:0; border-top:0 }
+.pouch .pcorner.br{ bottom:11cqw; right:4.5cqw; border-left:0; border-top:0 }
+
+.pouch .plabel{ position:absolute; inset:0; z-index:2; display:grid; place-items:center;
+  align-content:center; text-align:center; padding:0 4cqw; transform:translateY(-10%) }
+.pouch .plabel b{ display:block; font-family:'Big Shoulders Display',sans-serif; font-weight:900;
+  font-size:26cqw; line-height:.82; color:var(--paper); transform:skewX(-9deg);
+  text-shadow:0 .6cqw 0 rgba(0,0,0,.55), 0 0 9cqw rgba(224,39,24,.6) }
+.pouch .plabel b em{ font-style:normal; color:var(--rosso) }
+
+/* ── Cosa può uscire ──
+   La riga di pastiglie coi colori dei tier. Sui pacchetti veri c'è sempre uno
+   specchietto delle rarità, ed è la cosa che si guarda mentre si esita: dice
+   che là dentro può esserci qualcosa di buono. Qui i colori sono gli stessi
+   delle carte, quindi la riga si legge già senza spiegazioni. */
+.pouch .ppips{
+  position:absolute; left:0; right:0; bottom:15cqw; z-index:2;
+  display:flex; justify-content:center; align-items:center; gap:1.6cqw;
+}
+.pouch .ppips i{ width:2.4cqw; height:2.4cqw; border-radius:50%;
+  box-shadow:0 0 2cqw currentColor, inset 0 0 0 1px rgba(0,0,0,.4);
+  background:currentColor }
+.pouch .plabel small{ display:block; margin-top:3.4cqw; padding:1.4cqw 3.4cqw;
+  border:1px solid rgba(255,255,255,.32); background:rgba(0,0,0,.5);
+  font-family:'Chivo Mono',monospace; font-size:2.9cqw; letter-spacing:.34em;
+  text-transform:uppercase; color:rgba(255,255,255,.88) }
+
+/* La riga in fondo: su un pacchetto vero c'è sempre, ed è quel dettaglio a
+   far sembrare la busta un prodotto invece che un'illustrazione. */
+.pouch .pfoot{
+  position:absolute; bottom:9cqw; left:0; right:0; z-index:2; text-align:center;
+  font-family:'Chivo Mono',monospace; font-size:2.3cqw; letter-spacing:.3em;
+  text-transform:uppercase; color:rgba(255,255,255,.42);
+}
+
+/* ── Lo strappo ──
+
+   Il taglio lo fa il dito (o la lama da sola, con un clic): quello che segue
+   è ciò che succede quando la lama arriva in fondo. Tre gesti in fila, e
+   vanno in quest'ordine perché è quello vero:
+   ① la busta trema (la mano che la scuote)
+   ② il coperchio, già sollevato dal taglio, vola via ruotando
+   ③ il corpo si accascia in basso, e da lì sale la prima carta.
+
+   Il corpo NON deve sparire prima che il coperchio sia partito: è per questo
+   che aspetta 260ms invece di andarsene insieme. Il volo del coperchio parte
+   da dove il taglio lo aveva lasciato — la 0% non è scritta apposta — così non
+   c'è il salto indietro di un pezzo che si riappoggia per poi decollare. */
+.pouch.tearing{ animation:shake .42s ease-in-out; pointer-events:none }
+.pouch.tearing .plid{ transition:none; animation:strappo .5s .18s var(--ease) forwards }
+.pouch.tearing .pbody{ animation:cede .5s .26s var(--ease) forwards }
+.pouch.tearing .pcut{ animation:svanisci .25s .2s linear forwards }
+/* Il lampo dallo squarcio: si allarga da dove si è aperta, non dal centro. */
+.pouch.tearing::before{
+  content:''; position:absolute; left:10%; right:10%; top:calc(var(--lid) - 1cqw); height:2cqw; z-index:4;
+  background:radial-gradient(ellipse at 50% 50%, #fff, rgba(255,214,102,.6) 40%, transparent 72%);
+  opacity:0; animation:squarcio .55s .2s var(--ease) forwards;
+}
+
+@keyframes float{ 0%,100%{ translate:0 0 } 50%{ translate:0 -9px } }
+@keyframes shake{ 0%,100%{ rotate:0deg } 15%{ rotate:-3deg } 35%{ rotate:3.5deg }
+                  55%{ rotate:-3deg } 75%{ rotate:2deg } }
+@keyframes strappo{
+  to { transform:translate(34cqw, -48cqw) rotate(28deg); opacity:0 }
+}
+@keyframes squarcio{
+  0%   { opacity:0; transform:scaleX(.2) scaleY(.4) }
+  35%  { opacity:1; transform:scaleX(1) scaleY(2.6) }
+  100% { opacity:0; transform:scaleX(1.15) scaleY(.6) }
+}
+@keyframes cede{
+  0%   { transform:translateY(0) scale(1); opacity:1; filter:blur(0) }
+  30%  { transform:translateY(4%) scale(.985) }
+  100% { transform:translateY(46%) scale(.9); opacity:0; filter:blur(7px) }
+}
+@keyframes svanisci{ to{ opacity:0 } }
+
+/* ── L'uscita della carta ──
+   La prima sale da dove stava la busta, invece di comparire dal nulla al
+   centro dello schermo. È il seguito naturale di «il corpo si accascia»:
+   senza, i due momenti sembrano due animazioni diverse messe in fila. */
+@keyframes esce{
+  0%   { opacity:0; transform:translateY(46%) scale(.82) rotate(-3deg) }
+  60%  { opacity:1 }
+  100% { opacity:1; transform:none }
+}
+.spot.entra .slot{ animation:esce .52s var(--ease) backwards }
+
+/* ── Il mazzetto e il passaggio da una carta all'altra ──
+
+   Dietro la carta si vedono i dorsi di quelle che restano, sfalsati come un
+   mazzetto tenuto in mano: dicono quante ne mancano senza doverle contare, e
+   danno alla carta davanti qualcosa da cui uscire. Sono rettangoli finti e non
+   carte vere — di ognuna spunta un bordo di pochi pixel, e cinque SVG per
+   mostrare un bordo sarebbero uno spreco. Le misure sono in px perché lo
+   `.spot` non è un container e i `cqw` qui risolverebbero sul viewport.
+
+   Al clic la carta scoperta VOLA VIA a sinistra e la successiva si stacca dal
+   mazzetto: è il gesto di chi sfoglia una busta appena aperta, una carta alla
+   volta, gettando via quella già vista. Prima le carte si sostituivano sul
+   posto, e con quella la sensazione di tenerle in mano se ne andava. */
+.spot .mazzo{ position:absolute; inset:0; z-index:-1; pointer-events:none }
+.spot .mazzo i{
+  position:absolute; inset:0; border-radius:var(--radius);
+  background:radial-gradient(circle at 50% 44%, #23232d 0%, #131319 60%, #0a0a0d 100%);
+  box-shadow:0 18px 44px -18px rgba(0,0,0,.95),
+             inset 0 0 0 1px rgba(242,237,225,.14),
+             inset 0 0 0 11px #121217, inset 0 0 0 19px var(--rosso);
+  transform:translate(calc(var(--n) * 6px), calc(var(--n) * -5px)) rotate(calc(var(--n) * 1.6deg));
+}
+/* Il pannello con la raggiera e il monogramma, come sul verso vero: mentre la
+   carta davanti vola via il primo dorso resta scoperto per un terzo di
+   secondo, e una cornice rossa vuota lì in mezzo si vedeva. Sono gli stessi
+   gradienti del `.back`, senza la rosetta in SVG. */
+.spot .mazzo i::before{
+  content:''; position:absolute; inset:6.7% 9.4%; border-radius:6px;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(224,39,24,.22) 0 2.1deg, transparent 2.1deg 8deg),
+    radial-gradient(circle at 50% 50%, rgba(224,39,24,.34) 0%, transparent 64%),
+    linear-gradient(180deg, #1c1c24, #0e0e13);
+  box-shadow:inset 0 0 0 1px rgba(242,237,225,.1);
+}
+.spot .mazzo i::after{
+  content:'FB'; position:absolute; inset:0; display:grid; place-items:center;
+  font-family:'Big Shoulders Display',sans-serif; font-weight:900; font-size:56px; line-height:.8;
+  color:var(--paper); transform:skewX(-9deg);
+  text-shadow:0 2px 0 rgba(0,0,0,.7), 0 0 20px rgba(224,39,24,.8);
+}
+.spot.via .slot{ animation:via .36s var(--ease) forwards }
+.spot.via .aura, .spot.via .rays{ opacity:0 !important }
+@keyframes via{
+  to { transform:translate(-72%, -28%) rotate(-16deg) scale(.86); opacity:0 }
+}
+.spot.dal-mazzo .slot{ animation:dalMazzo .4s var(--ease) backwards }
+@keyframes dalMazzo{
+  0%   { opacity:.7; transform:translate(6px, -5px) rotate(1.6deg) scale(.985) }
+  100% { opacity:1; transform:none }
+}
+
+.flash{ position:fixed; inset:0; z-index:160; pointer-events:none; background:#fff; opacity:0 }
+.flash.go{ animation:flashout .55s ease-out }
+@keyframes flashout{ 0%{ opacity:.85 } 100%{ opacity:0 } }
+
+/* carta al centro */
+.spot{ position:relative; width:min(320px,74vw); aspect-ratio:5/7; perspective:1400px }
+.spot .slot{ width:100%; height:100% }
+.spot .aura{ position:absolute; inset:-24%; z-index:-1; border-radius:50%; opacity:0;
+  transition:opacity .6s; filter:blur(38px) }
+.spot.lit .aura{ opacity:.5 }
+
+/* I raggi dietro le carte rare: una ruota di lame di luce del colore del tier,
+   che gira piano. Compare solo a carta scoperta e solo da Epica in su — sulle
+   altre sarebbe rumore, e il senso sta proprio nel non vederla quasi mai. */
+.spot .rays{
+  position:absolute; inset:-55%; z-index:-2; border-radius:50%; opacity:0; pointer-events:none;
+  background:repeating-conic-gradient(from 0deg, transparent 0 5deg, var(--t,#ffb703) 5deg 7deg, transparent 7deg 14deg);
+  -webkit-mask:radial-gradient(circle, #000 18%, transparent 62%);
+          mask:radial-gradient(circle, #000 18%, transparent 62%);
+  transition:opacity .8s; animation:gira 16s linear infinite;
+}
+.spot.lit.raro .rays{ opacity:.32 }
+@keyframes gira{ to{ rotate:360deg } }
+
+/* alone dorato sulla 4ª — la posizione della rara, non la sua identità */
+.spot.hype::before{
+  content:''; position:absolute; inset:-30%; z-index:-1; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,183,3,.42), transparent 62%);
+  animation:throb 1.05s ease-in-out infinite }
+@keyframes throb{ 0%,100%{ transform:scale(.9); opacity:.45 } 50%{ transform:scale(1.12); opacity:.9 } }
+
+.counter{ font-family:'Chivo Mono',monospace; font-size:11px; letter-spacing:.32em;
+  text-transform:uppercase; color:var(--paper-dim) }
+.counter b{ color:var(--paper) }
+
+/* vassoio delle carte già rivelate */
+.tray{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px }
+.chip{ font-family:'Chivo Mono',monospace; font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; padding:6px 10px; border-radius:4px; color:var(--paper);
+  border:1px solid var(--c); background:color-mix(in srgb, var(--c) 16%, transparent);
+  animation:drop .4s var(--ease) backwards }
+.chip i{ font-style:normal; color:var(--c); font-weight:700; margin-right:5px }
+
+/* ventaglio finale */
+.fan{ display:flex; justify-content:center; align-items:center; padding:34px 0 }
+.fan .slot{ width:158px; margin:0 -20px; transition:transform .35s var(--ease);
+  animation:drop .5s var(--ease) backwards }
+.fan .slot:hover{ transform:translateY(-22px) scale(1.07); z-index:9 }
+.fan .slot:nth-child(1){ rotate:-11deg } .fan .slot:nth-child(2){ rotate:-5.5deg }
+.fan .slot:nth-child(4){ rotate:5.5deg } .fan .slot:nth-child(5){ rotate:11deg }
+
+/* ── Il ventaglio su schermo stretto ──
+
+   Su un telefono le carte affiancate sbordano e le ultime restano fuori
+   schermo: la busta si apre e non si vede cosa è uscito, che è l'unica cosa
+   che quella schermata deve fare. Vanno a capo a gruppi di tre.
+
+   Le misure sono scelte perché il quarto elemento NON ci stia mai: tre fanno
+   90vw meno un po', quattro ne farebbero 120vw. Così il taglio è a tre su
+   qualunque telefono, invece di dipendere dalla larghezza.
+
+   ⚠️ Le rotazioni ripartono a ogni riga con `3n+`, non seguono l'indice
+   assoluto: con le regole di sopra la seconda riga sarebbe nata dritta e
+   storta a caso, e il ventaglio smetterebbe di sembrare un ventaglio. Vale
+   per buste di qualunque misura — cinque carte fanno 3+2, otto fanno 3+3+2. */
+@media (max-width:640px){
+  .fan{ flex-wrap:wrap; padding:18px 0; row-gap:16px }
+  .fan .slot{ width:30vw; max-width:130px; margin:0 -6px }
+  .fan .slot:nth-child(3n+1){ rotate:-8deg }
+  .fan .slot:nth-child(3n+2){ rotate:0deg }
+  .fan .slot:nth-child(3n+3){ rotate:8deg }
+}
+
+
+@media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition-duration:.01ms !important } }
+
+/* ═══════════════════════════════════════════════════════════
+   MAGLIA E STEMMA
+
+   Un solo disegno per tutti gli stili: i motivi convivono nel
+   markup e li accende il CSS. È ciò che rende gratuita
+   l'anteprima dal vivo — cambiare stile è cambiare un
+   attributo, non ridisegnare in JavaScript.
+   ═══════════════════════════════════════════════════════════ */
+
+.maglia [class^="p-"]{ display:none }
+.maglia[data-stile="righe"]     .p-righe,
+.maglia[data-stile="cerchiati"] .p-cerchiati,
+.maglia[data-stile="banda"]     .p-banda,
+.maglia[data-stile="sash"]      .p-sash,
+.maglia[data-stile="quarti"]    .p-quarti,
+.maglia[data-stile="meta"]      .p-meta{ display:block }
+
+.stemma [class^="f-"]{ display:none }
+.stemma[data-forma="scudo"]   .f-scudo,
+.stemma[data-forma="cerchio"] .f-cerchio,
+.stemma[data-forma="rombo"]   .f-rombo,
+.stemma[data-forma="esagono"] .f-esagono{ display:block }
+
+/* Il simbolo non deve mai scomparire su un fondo dello stesso colore. */
+.stemma .simbolo{ filter:drop-shadow(0 1px 0 rgba(0,0,0,.35)) }
+
+/* Lo sponsor: il tipo di carattere lo decide `data-sponsor-stile`, così
+   l'anteprima cambia stile senza toccare il disegno. */
+.maglia .sponsor{ font-family:var(--font-display); font-weight:900; font-size:9px;
+  text-transform:uppercase; letter-spacing:.02em }
+.maglia[data-sponsor-stile="mono"]    .sponsor{ font-family:var(--font-mono); font-weight:700; font-size:7.5px }
+.maglia[data-sponsor-stile="corsivo"] .sponsor{ font-family:Georgia,serif; font-style:italic; font-weight:700; font-size:9.5px; text-transform:none }
+.maglia[data-sponsor-stile="contorno"] .sponsor{ fill:none; stroke:var(--m3); stroke-width:.7; paint-order:stroke }

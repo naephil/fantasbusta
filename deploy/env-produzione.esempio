@@ -1,0 +1,60 @@
+# Modello del .env di produzione.
+#
+# Si copia in «deploy/env-produzione» e si compila li': quel nome e' ignorato
+# da git e non entra nell'archivio, quindi le password vere non finiscono ne'
+# nel repository ne' in un file che gira.
+#
+#   copy deploy\env-produzione.esempio deploy\env-produzione
+#
+# ⚠️ In un .env tutto cio' che segue «=» e' il valore, spazi compresi. Non si
+# possono mettere note sulla stessa riga: una nota dopo il valore fa fallire
+# l'avvio con «Failed to parse dotenv file», e il messaggio non dice quale riga
+# sia colpevole in modo ovvio. Le note stanno sopra, precedute da «#».
+
+APP_NAME=Fantasbusta
+APP_ENV=production
+APP_DEBUG=false
+
+# Si genera al primo avvio, da pubblica.sh.
+# Una volta scritta NON si cambia piu': cambiarla scollega tutti e rende
+# illeggibile qualunque dato cifrato.
+APP_KEY=
+
+APP_TIMEZONE=Europe/Rome
+APP_LOCALE=it
+APP_FALLBACK_LOCALE=it
+APP_FAKER_LOCALE=it_IT
+
+# Con sottodominio basta questa.
+APP_URL=https://sbusta.naephil.ch
+
+# Con sottopercorso servono entrambe, e uguali. In quel caso commentare la
+# riga qui sopra e togliere il diesis a queste due.
+#APP_URL=https://naephil.ch/sbusta
+#ASSET_URL=https://naephil.ch/sbusta
+
+DB_CONNECTION=mariadb
+
+# ⚠️ NON «localhost»: con quel nome PDO cerca un socket unix sulla macchina
+# locale, e su un hosting condiviso il database sta altrove. L'errore che ne
+# esce e' «[2002] No such file or directory», che non parla affatto di rete e
+# manda a cercare dalla parte sbagliata.
+#
+# Va messo il nome che Hostpoint indica nel pannello del database, del tipo
+# UTENTE.mysql.db.internal.
+DB_HOST=
+DB_PORT=3306
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
+
+API_FOOTBALL_KEY=
+API_FOOTBALL_LEAGUE=135
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+
+LOG_CHANNEL=daily
+LOG_LEVEL=warning
